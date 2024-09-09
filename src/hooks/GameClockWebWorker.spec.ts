@@ -2,7 +2,7 @@ import { act } from "@testing-library/react";
 import { it, describe, beforeEach, vi, afterEach } from "vitest";
 import "@vitest/web-worker";
 
-describe("useGameClock hook", () => {
+describe("GameClockWebWorker", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });

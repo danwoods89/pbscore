@@ -1,16 +1,7 @@
+import getDriftAdjustedInterval from "./GameClockWebWorkerDriftHelper";
+
 export interface IGameClockWebWorker {
   onMessage(event: MessageEvent): void;
-}
-
-export interface GameClockMessage {
-  action: GameClockAction;
-  gameTimeInSeconds?: number;
-}
-
-export enum GameClockAction {
-  Start,
-  Stop,
-  Reset,
 }
 
 class GameClockWebWorker implements IGameClockWebWorker {
@@ -19,42 +10,45 @@ class GameClockWebWorker implements IGameClockWebWorker {
   }
 
   public onMessage(event: MessageEvent) {
-    const { action, gameTimeInSeconds } = event.data as GameClockMessage;
-
-    switch (action) {
-      case GameClockAction.Start: {
-        if (!gameTimeInSeconds)
-          throw Error("gameTimeInSeconds must be provided.");
-        this.startGameClock(gameTimeInSeconds!);
-        break;
-      }
-      case GameClockAction.Stop: {
-        this.startGameClock(gameTimeInSeconds!);
-        break;
-      }
-    }
+    const gameTimeInSeconds = event.data as number;
+    this.startGameClock(gameTimeInSeconds!);
   }
 
   private startGameClock(gameTimeInSeconds: number): void {
     const gameTimeInMilliseconds = gameTimeInSeconds * 1000;
-
     const startTimeInMilliseconds: number = performance.now();
+    // updated each tick
+    let currentTimeInMilliseconds: number = startTimeInMilliseconds;
+    let previousTimeInMilliseconds: number = startTimeInMilliseconds;
 
-    const timer = setInterval(() => {
-      const currentTimeInMilliseconds: number = performance.now();
+    const tick = () => {
+      previousTimeInMilliseconds = currentTimeInMilliseconds;
+      console.log(`Previous ${previousTimeInMilliseconds}`);
+      currentTimeInMilliseconds = performance.now();
+      console.log(`Current ${currentTimeInMilliseconds}`);
 
+      // time elapsed since the timer was started
       const timeElapsedInMilliseconds: number =
         currentTimeInMilliseconds - startTimeInMilliseconds;
 
+      // remaining time is the total game time minus the time elapsed
       const remainingTimeInMilliseconds: number =
         gameTimeInMilliseconds - timeElapsedInMilliseconds;
 
-      if (remainingTimeInMilliseconds <= 0) {
-        clearInterval(timer);
-      } else {
-        self.postMessage(remainingTimeInMilliseconds); // Send result back to the main thread
+      if (remainingTimeInMilliseconds > 0) {
+        self.postMessage(remainingTimeInMilliseconds);
+        setTimeout(
+          tick,
+          getDriftAdjustedInterval(
+            100,
+            previousTimeInMilliseconds,
+            currentTimeInMilliseconds
+          )
+        );
       }
-    }, 100);
+    };
+
+    setTimeout(tick, 100);
   }
 }
 
