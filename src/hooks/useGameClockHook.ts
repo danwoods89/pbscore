@@ -17,7 +17,7 @@ const useGameClock = (gameTimeInSeconds: number): GameClock => {
     if (isStarted) {
       const gameClockWebWorker: Worker = new Worker(new URL("./gameClockWebWorker.ts", import.meta.url), { type: "module" });
 
-      gameClockWebWorker.postMessage(timeRemainingInMillisecondsRef.current / 1000);
+      gameClockWebWorker.postMessage(timeRemainingInMillisecondsRef.current);
 
       // listen for countdown messages
       gameClockWebWorker.onmessage = (e: MessageEvent) => {
