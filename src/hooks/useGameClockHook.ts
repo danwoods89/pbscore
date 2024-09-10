@@ -1,34 +1,54 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
-const useGameClock = (gameTimeInSeconds: number) => {
-  const [timeLeft, setTimeLeft] = useState<number>(gameTimeInSeconds); // timeLeft in seconds
+export interface GameClock {
+  timeRemainingInMilliseconds: number;
+  start: () => void;
+  stop: () => void;
+  reset: () => void;
+}
+
+const useGameClock = (gameTimeInSeconds: number): GameClock => {
+  const gameTimeInMilliseconds: number = gameTimeInSeconds * 1000;
+  const [timeRemainingInMilliseconds, setTimeRemainingInMilliseconds] = useState<number>(gameTimeInMilliseconds); // timeLeft in milliseconds
+  const timeRemainingInMillisecondsRef = useRef<number>(gameTimeInSeconds * 1000); // timeLeft in milliseconds
+  const [isStarted, setIsStarted] = useState<boolean>(false);
 
   useEffect(() => {
-    const gameClockWebWorker = new Worker(
-      new URL("./gameClockWebWorker.ts", import.meta.url),
-      { type: "module" }
-    );
+    if (isStarted) {
+      const gameClockWebWorker: Worker = new Worker(new URL("./gameClockWebWorker.ts", import.meta.url), { type: "module" });
 
-    // give the web worker a starting time in seconds
-    gameClockWebWorker.postMessage(gameTimeInSeconds);
+      gameClockWebWorker.postMessage(timeRemainingInMillisecondsRef.current / 1000);
 
-    // listen for countdown messages
-    gameClockWebWorker.onmessage = (e: MessageEvent) => {
-      setTimeLeft(e.data);
-    };
+      // listen for countdown messages
+      gameClockWebWorker.onmessage = (e: MessageEvent) => {
+        setTimeRemainingInMilliseconds(e.data as number);
+      };
 
-    // // Handle errors from the worker
-    // gameClockWebWorker.onerror = (error) => {
-    //   console.error("Worker error:", error);
-    // };
+      return () => {
+        console.log("terminated");
+        gameClockWebWorker.terminate();
+      };
+    }
+  }, [isStarted]);
 
-    // cleanup
-    return () => {
-      gameClockWebWorker.terminate();
-    };
-  }, [gameTimeInSeconds]);
+  useEffect(() => {
+    timeRemainingInMillisecondsRef.current = timeRemainingInMilliseconds;
+  }, [timeRemainingInMilliseconds]);
 
-  return timeLeft;
+  const start = () => {
+    setIsStarted(true);
+  };
+
+  const stop = () => {
+    setIsStarted(false);
+  };
+
+  const reset = () => {
+    setTimeRemainingInMilliseconds(gameTimeInMilliseconds);
+    setIsStarted(false);
+  };
+
+  return { timeRemainingInMilliseconds, start, stop, reset };
 };
 
 export default useGameClock;

@@ -9,23 +9,11 @@ describe("GameClockWebWorkerDriftHelper", () => {
     [100, 24547541.164, 24547642.164, 99], // interval went slower 101ms, so speed the next interval up to 99ms
   ];
 
-  it.each(testCases)(
-    "should calculate an interval of %i ms going from %i ms to %i ms returns a drift-adjusted time of %i ms",
-    (
-      intervalTimeInMilliseconds,
-      previousTimeInMillseconds,
-      currentTimeInMilliseconds,
-      expectedDriftTimeInMilliseconds
-    ) => {
-      // arrange & act
-      const result = getDriftAdjustedInterval(
-        intervalTimeInMilliseconds,
-        previousTimeInMillseconds,
-        currentTimeInMilliseconds
-      );
+  it.each(testCases)("should calculate an interval of %i ms going from %i ms to %i ms returns a drift-adjusted time of %i ms", (intervalTimeInMilliseconds, previousTimeInMillseconds, currentTimeInMilliseconds, expectedDriftTimeInMilliseconds) => {
+    // arrange & act
+    const result = getDriftAdjustedInterval(intervalTimeInMilliseconds, previousTimeInMillseconds, currentTimeInMilliseconds);
 
-      // assert
-      expect(result).toEqual(expectedDriftTimeInMilliseconds);
-    }
-  );
+    // assert
+    expect(result).toEqual(expectedDriftTimeInMilliseconds);
+  });
 });

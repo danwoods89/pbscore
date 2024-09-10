@@ -10,12 +10,12 @@ class GameClockWebWorker implements IGameClockWebWorker {
   }
 
   public onMessage(event: MessageEvent) {
-    const gameTimeInSeconds = event.data as number;
-    this.startGameClock(gameTimeInSeconds!);
+    const gameTimeInMilliseconds = event.data as number;
+    if (!gameTimeInMilliseconds || gameTimeInMilliseconds <= 0) throw new Error("invalid gameTimeInMilliseconds");
+    this.startGameClock(gameTimeInMilliseconds!);
   }
 
-  private startGameClock(gameTimeInSeconds: number): void {
-    const gameTimeInMilliseconds = gameTimeInSeconds * 1000;
+  private startGameClock(gameTimeInMilliseconds: number): void {
     const startTimeInMilliseconds: number = performance.now();
     // updated each tick
     let currentTimeInMilliseconds: number = startTimeInMilliseconds;
@@ -23,28 +23,20 @@ class GameClockWebWorker implements IGameClockWebWorker {
 
     const tick = () => {
       previousTimeInMilliseconds = currentTimeInMilliseconds;
-      console.log(`Previous ${previousTimeInMilliseconds}`);
       currentTimeInMilliseconds = performance.now();
-      console.log(`Current ${currentTimeInMilliseconds}`);
 
       // time elapsed since the timer was started
-      const timeElapsedInMilliseconds: number =
-        currentTimeInMilliseconds - startTimeInMilliseconds;
+      const timeElapsedInMilliseconds: number = currentTimeInMilliseconds - startTimeInMilliseconds;
 
       // remaining time is the total game time minus the time elapsed
-      const remainingTimeInMilliseconds: number =
-        gameTimeInMilliseconds - timeElapsedInMilliseconds;
+      const remainingTimeInMilliseconds: number = gameTimeInMilliseconds - timeElapsedInMilliseconds;
+      let timeoutId: number | null = null;
 
       if (remainingTimeInMilliseconds > 0) {
         self.postMessage(remainingTimeInMilliseconds);
-        setTimeout(
-          tick,
-          getDriftAdjustedInterval(
-            100,
-            previousTimeInMilliseconds,
-            currentTimeInMilliseconds
-          )
-        );
+        timeoutId = setTimeout(tick, getDriftAdjustedInterval(100, previousTimeInMilliseconds, currentTimeInMilliseconds));
+      } else {
+        if (timeoutId) clearTimeout(timeoutId!);
       }
     };
 

@@ -1,19 +1,6 @@
-const getDriftAdjustedInterval = (
-  intervalTimeInMilliseconds: number,
-  previousTimeInMillseconds: number,
-  currentTimeInMilliseconds: number
-): number => {
-  const actualIntervalInMilliseconds =
-    currentTimeInMilliseconds - previousTimeInMillseconds;
-  console.log(`actualIntervalInMilliseconds ${actualIntervalInMilliseconds}`);
-
-  const differenceInMilliseconds =
-    intervalTimeInMilliseconds - actualIntervalInMilliseconds;
-  console.log(`differenceInMilliseconds ${differenceInMilliseconds}`);
-
-  console.log(
-    `result  ${intervalTimeInMilliseconds + differenceInMilliseconds}`
-  );
+const getDriftAdjustedInterval = (intervalTimeInMilliseconds: number, previousTimeInMillseconds: number, currentTimeInMilliseconds: number): number => {
+  const actualIntervalInMilliseconds = currentTimeInMilliseconds - previousTimeInMillseconds;
+  const differenceInMilliseconds = intervalTimeInMilliseconds - actualIntervalInMilliseconds;
   return intervalTimeInMilliseconds + differenceInMilliseconds;
 };
 
