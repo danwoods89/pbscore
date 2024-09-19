@@ -1,5 +1,5 @@
 import "./App.css";
-import useGameClock from "./hooks/useGameClockHook";
+import useGameClock from "./hooks/gameClock/useGameClockHook";
 import formatTime from "./utils/formatTime";
 
 const App: React.FC = () => {
@@ -7,16 +7,15 @@ const App: React.FC = () => {
 
   const handleStartClick = () => {
     gameClock.start();
-  }
+  };
 
   const handleStopClick = () => {
     gameClock.stop();
-  }
+  };
 
   const handleResetClick = () => {
     gameClock.reset();
-  }
-
+  };
 
   return (
     <div>

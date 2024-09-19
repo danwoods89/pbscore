@@ -1,10 +1,12 @@
 import getDriftAdjustedInterval from "./GameClockWebWorkerDriftHelper";
 
+const delayInMilliseconds: number = 100;
+
 export interface IGameClockWebWorker {
   onMessage(event: MessageEvent): void;
 }
 
-class GameClockWebWorker implements IGameClockWebWorker {
+export class GameClockWebWorker implements IGameClockWebWorker {
   constructor() {
     self.onmessage = this.onMessage.bind(this);
   }
@@ -12,12 +14,13 @@ class GameClockWebWorker implements IGameClockWebWorker {
   public onMessage(event: MessageEvent) {
     const gameTimeInMilliseconds = event.data as number;
     if (!gameTimeInMilliseconds || gameTimeInMilliseconds <= 0) throw new Error("invalid gameTimeInMilliseconds");
-    this.startGameClock(gameTimeInMilliseconds!);
+    this.startGameClock(gameTimeInMilliseconds!, delayInMilliseconds);
   }
 
-  private startGameClock(gameTimeInMilliseconds: number): void {
+  private startGameClock(gameTimeInMilliseconds: number, delayInMilliseconds: number): void {
     const startTimeInMilliseconds: number = performance.now();
     // updated each tick
+    let isFirstTick = true;
     let currentTimeInMilliseconds: number = startTimeInMilliseconds;
     let previousTimeInMilliseconds: number = startTimeInMilliseconds;
 
@@ -30,17 +33,22 @@ class GameClockWebWorker implements IGameClockWebWorker {
 
       // remaining time is the total game time minus the time elapsed
       const remainingTimeInMilliseconds: number = gameTimeInMilliseconds - timeElapsedInMilliseconds;
+
       let timeoutId: number | null = null;
 
+      // while there is still game time
       if (remainingTimeInMilliseconds > 0) {
         self.postMessage(remainingTimeInMilliseconds);
-        timeoutId = setTimeout(tick, getDriftAdjustedInterval(100, previousTimeInMilliseconds, currentTimeInMilliseconds));
+        timeoutId = self.setTimeout(tick, isFirstTick ? delayInMilliseconds : getDriftAdjustedInterval(delayInMilliseconds, previousTimeInMilliseconds, currentTimeInMilliseconds));
       } else {
-        if (timeoutId) clearTimeout(timeoutId!);
+        if (timeoutId) self.clearTimeout(timeoutId!);
       }
+
+      isFirstTick = false;
     };
 
-    setTimeout(tick, 100);
+    console.log("first tick");
+    tick();
   }
 }
 

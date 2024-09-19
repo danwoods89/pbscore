@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import GameClockWebWorker from "./GameClockWebWorker?worker";
 
 export interface GameClock {
   timeRemainingInMilliseconds: number;
@@ -15,7 +16,7 @@ const useGameClock = (gameTimeInSeconds: number): GameClock => {
 
   useEffect(() => {
     if (isStarted) {
-      const gameClockWebWorker: Worker = new Worker(new URL("./gameClockWebWorker.ts", import.meta.url), { type: "module" });
+      const gameClockWebWorker: Worker = new GameClockWebWorker();
 
       gameClockWebWorker.postMessage(timeRemainingInMillisecondsRef.current);
 
