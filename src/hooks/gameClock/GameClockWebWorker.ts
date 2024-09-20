@@ -1,6 +1,6 @@
 import getDriftAdjustedInterval from "./GameClockWebWorkerDriftHelper";
 
-const delayInMilliseconds: number = 100;
+const DELAY_IN_MILLISECONDS: number = 100;
 
 export interface IGameClockWebWorker {
   onMessage(event: MessageEvent): void;
@@ -14,7 +14,7 @@ export class GameClockWebWorker implements IGameClockWebWorker {
   public onMessage(event: MessageEvent) {
     const gameTimeInMilliseconds = event.data as number;
     if (!gameTimeInMilliseconds || gameTimeInMilliseconds <= 0) throw new Error("invalid gameTimeInMilliseconds");
-    this.startGameClock(gameTimeInMilliseconds!, delayInMilliseconds);
+    this.startGameClock(gameTimeInMilliseconds!, DELAY_IN_MILLISECONDS);
   }
 
   private startGameClock(gameTimeInMilliseconds: number, delayInMilliseconds: number): void {
