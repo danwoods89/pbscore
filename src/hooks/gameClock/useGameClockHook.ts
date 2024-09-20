@@ -26,7 +26,6 @@ const useGameClock = (gameTimeInSeconds: number): GameClock => {
       };
 
       return () => {
-        console.log("terminated");
         gameClockWebWorker.terminate();
       };
     }

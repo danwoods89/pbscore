@@ -47,7 +47,6 @@ export class GameClockWebWorker implements IGameClockWebWorker {
       isFirstTick = false;
     };
 
-    console.log("first tick");
     tick();
   }
 }

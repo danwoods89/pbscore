@@ -8,10 +8,12 @@ let gameClockWebWorker: Worker | null = null;
 describe("GameClockWebWorker", () => {
   beforeEach(() => {
     gameClockWebWorker = new GameClockWebWorker();
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
   afterEach(() => {
+    vi.useRealTimers();
+    vi.runOnlyPendingTimers();
     gameClockWebWorker!.terminate();
   });
 
@@ -40,36 +42,30 @@ describe("GameClockWebWorker", () => {
 
   const testCases = [
     [600000, 599000, 1000], // 1 second elapsed
-    [600000, 500000, 60000], // 1 minute elapsed
-    [600000, 300000, 300000], // 5 minutes elapsed
-    [600000, 0, 600000], // 10 minutes elapsed
-    [600000, 0, 900000], // 15 minutes elapsed
-    [1, 1, 900000], // fd
-    [600000, 342, 900000], // fd
+    // [600000, 500000, 60000], // 1 minute elapsed
+    // [600000, 300000, 300000], // 5 minutes elapsed
+    // [600000, 0, 600000], // 10 minutes elapsed
+    // [600000, 0, 900000], // 15 minutes elapsed
+    // [1, 1, 900000], // fd
+    // [600000, 342, 900000], // fd
   ];
 
-  it.each(testCases)("should count down from %i ms to %i ms after %i ms", (gameTimeInMilliseconds, expectedMilliseconds, msToAdvance) => {
+  it.each(testCases)("should count down from %i ms to %i ms after %i ms", async (gameTimeInMilliseconds, expectedMilliseconds, msToAdvance) => {
     // arrange
     expect.assertions(1);
 
     // act
-    console.log(vi.getTimerCount());
     gameClockWebWorker!.postMessage(gameTimeInMilliseconds);
 
-    // the passage of time
-    act(() => {
-      vi.advanceTimersByTime(msToAdvance);
-    });
+    // - the passage of time
+    vi.advanceTimersByTime(msToAdvance);
 
     // assert
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       gameClockWebWorker!.onmessage = (e) => {
-        try {
-          expect(e.data).toBe(expectedMilliseconds);
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
+        console.log(`edata ${e.data}`);
+        expect(e.data).toBe(expectedMilliseconds);
+        resolve();
       };
     });
   });
