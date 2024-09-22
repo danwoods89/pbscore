@@ -3,7 +3,7 @@ import useGameClock from "./hooks/gameClock/useGameClockHook";
 import formatTime from "./utils/formatTime";
 
 const App: React.FC = () => {
-  const gameClock = useGameClock(300);
+  const gameClock = useGameClock(-5);
 
   const handleStartClick = () => {
     gameClock.start();

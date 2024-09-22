@@ -2,22 +2,35 @@ import getDriftAdjustedInterval from "./GameClockWebWorkerDriftHelper";
 
 const DELAY_IN_MILLISECONDS: number = 100;
 
-export interface IGameClockWebWorker {
-  onMessage(event: MessageEvent): void;
-}
+class GameClockWebWorker {
+  private _initialised: boolean = false;
 
-export class GameClockWebWorker implements IGameClockWebWorker {
   constructor() {
     self.onmessage = this.onMessage.bind(this);
   }
 
-  public onMessage(event: MessageEvent) {
-    const gameTimeInMilliseconds = event.data as number;
-    if (!gameTimeInMilliseconds || gameTimeInMilliseconds <= 0) throw new Error("invalid gameTimeInMilliseconds");
-    this.startGameClock(gameTimeInMilliseconds!, DELAY_IN_MILLISECONDS);
+  private onMessage(message: MessageEvent) {
+    // assertions
+    if (this._initialised !== false) this.postError(new Error());
+    if (!message.data) this.postError(ReferenceError());
+    if (typeof message.data !== "number") this.postError(new TypeError());
+    if (message.data <= 0) this.postError(new RangeError());
+
+    // start counting down
+    this.startGameClock(message.data as number, DELAY_IN_MILLISECONDS);
+  }
+
+  private postError(error: Error) {
+    // post errors back to the main thread as
+    // testing framework considers exceptions
+    // sent back via 'onerror' as unhandled
+    console.error(error);
+    self.postMessage({ isError: true, error: error });
+    self.close();
   }
 
   private startGameClock(gameTimeInMilliseconds: number, delayInMilliseconds: number): void {
+    this._initialised = true;
     const startTimeInMilliseconds: number = performance.now();
     // updated each tick
     let isFirstTick = true;

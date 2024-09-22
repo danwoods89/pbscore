@@ -21,8 +21,16 @@ const useGameClock = (gameTimeInSeconds: number): GameClock => {
       gameClockWebWorker.postMessage(timeRemainingInMillisecondsRef.current);
 
       // listen for countdown messages
-      gameClockWebWorker.onmessage = (e: MessageEvent) => {
-        setTimeRemainingInMilliseconds(e.data as number);
+      gameClockWebWorker.onmessage = (message: MessageEvent) => {
+        if (message.data.isError !== undefined) {
+          const error = message.data.error as Error;
+          throw error;
+        }
+        setTimeRemainingInMilliseconds(message.data as number);
+      };
+
+      gameClockWebWorker.onerror = (event: ErrorEvent) => {
+        throw new Error(event.message);
       };
 
       return () => {
