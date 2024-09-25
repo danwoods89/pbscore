@@ -1,9 +1,21 @@
 import getDriftAdjustedInterval from "./GameClockWebWorkerDriftHelper";
 
-const DELAY_IN_MILLISECONDS: number = 100;
+const DEFAULT_POLLING_INTERVAL: number = 100;
+
+export interface GameClockWebWorkerRequestMessageData {
+  gameTimeInMilliseconds: number;
+  pollingIntervalInMilliseconds?: number | undefined;
+}
+
+export interface GameClockWebWorkerResponseMessageData {
+  remainingTimeInMilliseconds: number | undefined;
+  isError: boolean;
+  error: Error | undefined;
+}
 
 class GameClockWebWorker {
   private _initialised: boolean = false;
+  private _pollingIntervalInMilliseconds: number | undefined;
 
   constructor() {
     self.onmessage = this.onMessage.bind(this);
@@ -12,24 +24,18 @@ class GameClockWebWorker {
   private onMessage(message: MessageEvent) {
     // assertions
     if (this._initialised !== false) this.postError(new Error());
-    if (!message.data) this.postError(ReferenceError());
-    if (typeof message.data !== "number") this.postError(new TypeError());
-    if (message.data <= 0) this.postError(new RangeError());
+    if (!message?.data) this.postError(ReferenceError());
+    const data = message.data as GameClockWebWorkerRequestMessageData;
+    this.assert(data);
+
+    // set the polling interval
+    this._pollingIntervalInMilliseconds = data.pollingIntervalInMilliseconds || DEFAULT_POLLING_INTERVAL;
 
     // start counting down
-    this.startGameClock(message.data as number, DELAY_IN_MILLISECONDS);
+    this.startGameClock(message.data.gameTimeInMilliseconds);
   }
 
-  private postError(error: Error) {
-    // post errors back to the main thread as
-    // testing framework considers exceptions
-    // sent back via 'onerror' as unhandled
-    console.error(error);
-    self.postMessage({ isError: true, error: error });
-    self.close();
-  }
-
-  private startGameClock(gameTimeInMilliseconds: number, delayInMilliseconds: number): void {
+  private startGameClock(gameTimeInMilliseconds: number): void {
     this._initialised = true;
     const startTimeInMilliseconds: number = performance.now();
     // updated each tick
@@ -51,8 +57,9 @@ class GameClockWebWorker {
 
       // while there is still game time
       if (remainingTimeInMilliseconds > 0) {
-        self.postMessage(remainingTimeInMilliseconds);
-        timeoutId = self.setTimeout(tick, isFirstTick ? delayInMilliseconds : getDriftAdjustedInterval(delayInMilliseconds, previousTimeInMilliseconds, currentTimeInMilliseconds));
+        const message: GameClockWebWorkerResponseMessageData = { remainingTimeInMilliseconds, isError: false, error: undefined };
+        self.postMessage(message);
+        timeoutId = self.setTimeout(tick, isFirstTick ? this._pollingIntervalInMilliseconds : getDriftAdjustedInterval(this._pollingIntervalInMilliseconds!, previousTimeInMilliseconds, currentTimeInMilliseconds));
       } else {
         if (timeoutId) self.clearTimeout(timeoutId!);
       }
@@ -61,6 +68,21 @@ class GameClockWebWorker {
     };
 
     tick();
+  }
+
+  private assert(data: GameClockWebWorkerRequestMessageData) {
+    if (!data.gameTimeInMilliseconds) this.postError(ReferenceError());
+    if (data.gameTimeInMilliseconds <= 0 || data.gameTimeInMilliseconds > Number.MAX_SAFE_INTEGER) this.postError(new RangeError());
+    if (data.pollingIntervalInMilliseconds !== undefined && (data.pollingIntervalInMilliseconds <= 0 || data.pollingIntervalInMilliseconds > Number.MAX_SAFE_INTEGER)) this.postError(new RangeError());
+  }
+
+  private postError(error: Error) {
+    // post errors back to the main thread as
+    // testing framework considers exceptions
+    // sent back via 'onerror' as unhandled
+    const message: GameClockWebWorkerResponseMessageData = { remainingTimeInMilliseconds: undefined, isError: true, error: error };
+    self.postMessage(message);
+    self.close();
   }
 }
 

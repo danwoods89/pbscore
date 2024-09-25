@@ -1,6 +1,7 @@
 import "@vitest/web-worker";
 import { it, describe, beforeEach, vi, afterEach, expect } from "vitest";
 import GameClockWebWorker from "./GameClockWebWorker?worker";
+import { GameClockWebWorkerRequestMessageData, GameClockWebWorkerResponseMessageData } from "./GameClockWebWorker";
 
 let gameClockWebWorker: Worker | null = null;
 
@@ -12,21 +13,22 @@ describe("GameClockWebWorker", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
     gameClockWebWorker!.terminate();
   });
 
-  const countDownCases: [number, number, number, boolean][] = [
+  const countdownCases: [number, number, number, boolean][] = [
     [1000, 600000, 599000, true],
     [1000, 1000, 0, true],
     [1000, 600000, 300000, false],
   ];
-
-  it.each(countDownCases)("should count down %i ms from %i ms to %i ms - %s", async (millisecondsToAdvance, gameTimeInMilliseconds, expectedMilliseconds, isValid) => {
+  it.each(countdownCases)("should count down %i ms from %i ms to %i ms - %s", async (millisecondsToAdvance, gameTimeInMilliseconds, expectedMilliseconds, isValid) => {
     // arrange
     let totalMillisecondsAdvanced: number = 0;
+    const message: GameClockWebWorkerRequestMessageData = { gameTimeInMilliseconds, pollingIntervalInMilliseconds: 100 };
 
     // act
-    gameClockWebWorker!.postMessage(gameTimeInMilliseconds);
+    gameClockWebWorker!.postMessage(message);
 
     // assert
     expect(gameClockWebWorker).toBeDefined();
@@ -34,12 +36,12 @@ describe("GameClockWebWorker", () => {
     do {
       await new Promise<void>((resolve) => {
         gameClockWebWorker!.onmessage = async (e: MessageEvent) => {
-          expect(e.data).toBeTypeOf("number");
+          const data: GameClockWebWorkerResponseMessageData = e.data as GameClockWebWorkerResponseMessageData;
           // advance a tick
           await vi.advanceTimersByTimeAsync(100);
-          expect(e.data).toBe(gameTimeInMilliseconds - totalMillisecondsAdvanced);
-          expect(e.data.isError).toBeUndefined();
-          expect(e.data.error).toBeUndefined();
+          expect(data.remainingTimeInMilliseconds).toBe(gameTimeInMilliseconds - totalMillisecondsAdvanced);
+          expect(data.isError).toBe(false);
+          expect(data.error).toBeUndefined();
           totalMillisecondsAdvanced += 100;
           resolve();
         };
@@ -49,11 +51,22 @@ describe("GameClockWebWorker", () => {
     expect(gameTimeInMilliseconds - expectedMilliseconds === totalMillisecondsAdvanced).toBe(isValid);
   });
 
-  const invalidCases: [number | null | undefined | string][] = [[0], [-1], [null], [undefined], ["test"]];
-  it.each(invalidCases)("should receive an error when message is %s", async (gameTimeInMilliseconds) => {
+  const invalidCases: [number | undefined, number | undefined][] = [
+    [undefined, 100],
+    [0, 100],
+    [-1, 100],
+    [Number.MAX_SAFE_INTEGER + 1, 100],
+    [1, 0],
+    [1, -1],
+    [1, Number.MAX_SAFE_INTEGER + 1],
+    [undefined, undefined],
+  ];
+  it.each(invalidCases)("should receive an error when gameTimeInMilliseconds is %s and pollingIntervalInMilliseconds is %s", async (gameTimeInMilliseconds, pollingIntervalInMilliseconds) => {
     // arrange
+    const message = { gameTimeInMilliseconds, pollingIntervalInMilliseconds };
+
     // act
-    gameClockWebWorker!.postMessage(gameTimeInMilliseconds);
+    gameClockWebWorker!.postMessage(message);
 
     // assert
     await new Promise<void>((resolve) => {
@@ -65,28 +78,55 @@ describe("GameClockWebWorker", () => {
     });
   });
 
-  it("should receive an error when worker is already initialised", async () => {
+  const validCases: [number | undefined, number | undefined][] = [
+    [1, undefined],
+    [1, 1],
+    [1, 100],
+  ];
+  it.each(validCases)("should not receive an error when gameTimeInMilliseconds is %s and pollingIntervalInMilliseconds is %s", async (gameTimeInMilliseconds, pollingIntervalInMilliseconds) => {
     // arrange
-    // - post the first message
-    gameClockWebWorker!.postMessage(1000);
-    let runCount = 0;
+    const message = { gameTimeInMilliseconds, pollingIntervalInMilliseconds };
 
     // act
-    // - post a second message
-    gameClockWebWorker!.postMessage(1000);
+    gameClockWebWorker!.postMessage(message);
 
     // assert
     await new Promise<void>((resolve) => {
       gameClockWebWorker!.onmessage = async (e: MessageEvent) => {
+        expect(e.data.isError).toBe(false);
+        expect(e.data.error).toBeUndefined();
+        resolve();
+      };
+    });
+  });
+
+  it("should receive an error when worker is already initialised", async () => {
+    // arrange
+    const message: GameClockWebWorkerRequestMessageData = { gameTimeInMilliseconds: 1000, pollingIntervalInMilliseconds: 100 };
+
+    // - post the first message
+    gameClockWebWorker!.postMessage(message);
+    let runCount = 0;
+
+    // act
+    // - post a second message
+    gameClockWebWorker!.postMessage(message);
+
+    // assert
+    await new Promise<void>((resolve) => {
+      gameClockWebWorker!.onmessage = async (e: MessageEvent) => {
+        const data: GameClockWebWorkerResponseMessageData = e.data as GameClockWebWorkerResponseMessageData;
         runCount++;
         if (runCount == 1) {
-          expect(e.data.isError).toBeUndefined();
-          expect(e.data.error).toBeUndefined();
+          expect(data.remainingTimeInMilliseconds).toBeDefined();
+          expect(data.isError).toBe(false);
+          expect(data.error).toBeUndefined();
         }
 
         if (runCount > 1) {
-          expect(e.data.isError).toBe(true);
-          expect(e.data.error).toBeDefined();
+          expect(data.remainingTimeInMilliseconds).toBeUndefined();
+          expect(data.isError).toBe(true);
+          expect(data.error).toBeDefined();
         }
         resolve();
       };
