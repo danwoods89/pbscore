@@ -21,15 +21,14 @@ class GameClockWebWorker {
     self.onmessage = this.onMessage.bind(this);
   }
 
-  private onMessage(message: MessageEvent) {
+  private onMessage(message: MessageEvent<GameClockWebWorkerRequestMessageData>) {
     // assertions
     if (this._initialised !== false) this.postError(new Error());
     if (!message?.data) this.postError(ReferenceError());
-    const data = message.data as GameClockWebWorkerRequestMessageData;
-    this.assert(data);
+    this.assert(message.data);
 
     // set the polling interval
-    this._pollingIntervalInMilliseconds = data.pollingIntervalInMilliseconds || DEFAULT_POLLING_INTERVAL;
+    this._pollingIntervalInMilliseconds = message.data.pollingIntervalInMilliseconds || DEFAULT_POLLING_INTERVAL;
 
     // start counting down
     this.startGameClock(message.data.gameTimeInMilliseconds);
@@ -71,7 +70,7 @@ class GameClockWebWorker {
   }
 
   private assert(data: GameClockWebWorkerRequestMessageData) {
-    if (!data.gameTimeInMilliseconds) this.postError(ReferenceError());
+    if (!data.gameTimeInMilliseconds) this.postError(new ReferenceError());
     if (data.gameTimeInMilliseconds <= 0 || data.gameTimeInMilliseconds > Number.MAX_SAFE_INTEGER) this.postError(new RangeError());
     if (data.pollingIntervalInMilliseconds !== undefined && (data.pollingIntervalInMilliseconds <= 0 || data.pollingIntervalInMilliseconds > Number.MAX_SAFE_INTEGER)) this.postError(new RangeError());
   }

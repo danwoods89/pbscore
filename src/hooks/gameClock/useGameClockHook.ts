@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import GameClockWebWorker from "./GameClockWebWorker?worker";
+import { GameClockWebWorkerRequestMessageData, GameClockWebWorkerResponseMessageData } from "./GameClockWebWorker";
 
 export interface GameClock {
   timeRemainingInMilliseconds: number;
@@ -17,16 +18,17 @@ const useGameClock = (gameTimeInSeconds: number): GameClock => {
   useEffect(() => {
     if (isStarted) {
       const gameClockWebWorker: Worker = new GameClockWebWorker();
-
-      gameClockWebWorker.postMessage(timeRemainingInMillisecondsRef.current);
+      const message: GameClockWebWorkerRequestMessageData = { gameTimeInMilliseconds: timeRemainingInMillisecondsRef.current };
+      gameClockWebWorker.postMessage(message);
 
       // listen for countdown messages
-      gameClockWebWorker.onmessage = (message: MessageEvent) => {
-        if (message.data.isError !== undefined) {
+      gameClockWebWorker.onmessage = (message: MessageEvent<GameClockWebWorkerResponseMessageData>) => {
+        if (message.data.isError === true) {
           const error = message.data.error as Error;
           throw error;
         }
-        setTimeRemainingInMilliseconds(message.data as number);
+
+        setTimeRemainingInMilliseconds(message.data.remainingTimeInMilliseconds!);
       };
 
       gameClockWebWorker.onerror = (event: ErrorEvent) => {
