@@ -1,5 +1,4 @@
 import { it, describe, expect } from "vitest";
-import "@vitest/web-worker";
 import getDriftAdjustedInterval from "./GameClockWebWorkerDriftHelper";
 
 describe("GameClockWebWorkerDriftHelper", () => {

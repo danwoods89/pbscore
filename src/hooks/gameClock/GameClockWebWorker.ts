@@ -1,10 +1,8 @@
 import getDriftAdjustedInterval from "./GameClockWebWorkerDriftHelper";
 
-const DEFAULT_POLLING_INTERVAL: number = 100;
-
 export interface GameClockWebWorkerRequestMessageData {
   gameTimeInMilliseconds: number;
-  pollingIntervalInMilliseconds?: number | undefined;
+  pollingIntervalInMilliseconds: number;
 }
 
 export interface GameClockWebWorkerResponseMessageData {
@@ -28,7 +26,7 @@ class GameClockWebWorker {
     this.assert(message.data);
 
     // set the polling interval
-    this._pollingIntervalInMilliseconds = message.data.pollingIntervalInMilliseconds || DEFAULT_POLLING_INTERVAL;
+    this._pollingIntervalInMilliseconds = message.data.pollingIntervalInMilliseconds;
 
     // start counting down
     this.startGameClock(message.data.gameTimeInMilliseconds);
@@ -71,8 +69,11 @@ class GameClockWebWorker {
 
   private assert(data: GameClockWebWorkerRequestMessageData) {
     if (!data.gameTimeInMilliseconds) this.postError(new ReferenceError());
+    if (typeof data.gameTimeInMilliseconds !== "number") this.postError(new TypeError());
+    if (!data.pollingIntervalInMilliseconds) this.postError(new ReferenceError());
+    if (typeof data.pollingIntervalInMilliseconds !== "number") this.postError(new TypeError());
     if (data.gameTimeInMilliseconds <= 0 || data.gameTimeInMilliseconds > Number.MAX_SAFE_INTEGER) this.postError(new RangeError());
-    if (data.pollingIntervalInMilliseconds !== undefined && (data.pollingIntervalInMilliseconds <= 0 || data.pollingIntervalInMilliseconds > Number.MAX_SAFE_INTEGER)) this.postError(new RangeError());
+    if (data.pollingIntervalInMilliseconds <= 0 || data.pollingIntervalInMilliseconds > Number.MAX_SAFE_INTEGER) this.postError(new RangeError());
   }
 
   private postError(error: Error) {
