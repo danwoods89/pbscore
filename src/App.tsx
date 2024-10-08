@@ -1,9 +1,9 @@
 import "./App.css";
-import useGameClock from "./hooks/gameClock/useGameClockHook";
+import useStopwatch from "./hooks/stopwatch/useStopwatchHook";
 import formatTime from "./utils/formatTime";
 
 const App: React.FC = () => {
-  const gameClock = useGameClock(600);
+  const gameClock = useStopwatch(1);
 
   const handleStartClick = () => {
     gameClock.start();
@@ -19,7 +19,7 @@ const App: React.FC = () => {
 
   return (
     <div>
-      <h1>Time Left: {formatTime(gameClock.timeRemainingInMilliseconds)}</h1>
+      <h1>Time Left: {formatTime(gameClock.timeElapsedInMilliseconds)}</h1>
       <button onClick={handleStartClick}>Start</button>
       <button onClick={handleStopClick}>Stop</button>
       <button onClick={handleResetClick}>Reset</button>

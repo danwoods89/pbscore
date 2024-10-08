@@ -3,23 +3,22 @@ import GameClockWebWorker from "./GameClockWebWorker?worker";
 import { GameClockWebWorkerRequestMessageData, GameClockWebWorkerResponseMessageData } from "./GameClockWebWorker";
 
 export interface GameClock {
-  timeRemainingInMilliseconds: number;
+  remainingTimeInMilliseconds: number;
   start: () => void;
   stop: () => void;
   reset: () => void;
 }
 
-const useGameClock = (gameTimeInSeconds: number, pollingIntervalInMilliseconds: number = 100): GameClock => {
-  const gameTimeInMilliseconds: number = gameTimeInSeconds * 1000;
-  const [timeRemainingInMilliseconds, setTimeRemainingInMilliseconds] = useState<number>(gameTimeInMilliseconds); // timeLeft in milliseconds
-  const timeRemainingInMillisecondsRef = useRef<number>(gameTimeInSeconds * 1000); // timeLeft in milliseconds
-  const pollingIntervalInMillisecondsRef = useRef<number>(pollingIntervalInMilliseconds); // timeLeft in milliseconds
+const useGameClock = (gameTimeInMilliseconds: number, pollingIntervalInMilliseconds: number = 100, callback: () => void): GameClock => {
+  const [remainingTimeInMilliseconds, setRemainingTimeInMilliseconds] = useState<number>(gameTimeInMilliseconds); // timeLeft in milliseconds
+  const remainingTimeInMillisecondsRef = useRef<number>(gameTimeInMilliseconds);
+  const pollingIntervalInMillisecondsRef = useRef<number>(pollingIntervalInMilliseconds); // polling interval in milliseconds
   const [isStarted, setIsStarted] = useState<boolean>(false);
 
   useEffect(() => {
     if (isStarted) {
       const gameClockWebWorker: Worker = new GameClockWebWorker();
-      const message: GameClockWebWorkerRequestMessageData = { gameTimeInMilliseconds: timeRemainingInMillisecondsRef.current, pollingIntervalInMilliseconds: pollingIntervalInMillisecondsRef.current };
+      const message: GameClockWebWorkerRequestMessageData = { gameTimeInMilliseconds: remainingTimeInMillisecondsRef.current, pollingIntervalInMilliseconds: pollingIntervalInMillisecondsRef.current };
       gameClockWebWorker.postMessage(message);
 
       // listen for countdown messages
@@ -28,7 +27,7 @@ const useGameClock = (gameTimeInSeconds: number, pollingIntervalInMilliseconds: 
           throw message.data.error;
         }
 
-        setTimeRemainingInMilliseconds(message.data.remainingTimeInMilliseconds!);
+        setRemainingTimeInMilliseconds(message.data.remainingTimeInMilliseconds!);
       };
 
       gameClockWebWorker.onerror = (event: ErrorEvent) => {
@@ -46,9 +45,14 @@ const useGameClock = (gameTimeInSeconds: number, pollingIntervalInMilliseconds: 
   }, [isStarted]);
 
   useEffect(() => {
-    timeRemainingInMillisecondsRef.current = timeRemainingInMilliseconds;
+    remainingTimeInMillisecondsRef.current = remainingTimeInMilliseconds;
     pollingIntervalInMillisecondsRef.current = pollingIntervalInMilliseconds;
-  }, [pollingIntervalInMilliseconds, timeRemainingInMilliseconds]);
+
+    if (remainingTimeInMillisecondsRef.current <= 0) {
+      setIsStarted(false);
+      callback();
+    }
+  }, [callback, pollingIntervalInMilliseconds, remainingTimeInMilliseconds]);
 
   const start = () => {
     setIsStarted(true);
@@ -59,11 +63,11 @@ const useGameClock = (gameTimeInSeconds: number, pollingIntervalInMilliseconds: 
   };
 
   const reset = () => {
-    setTimeRemainingInMilliseconds(gameTimeInMilliseconds);
+    setRemainingTimeInMilliseconds(gameTimeInMilliseconds);
     setIsStarted(false);
   };
 
-  return { timeRemainingInMilliseconds, start, stop, reset };
+  return { remainingTimeInMilliseconds, start, stop, reset };
 };
 
 export default useGameClock;

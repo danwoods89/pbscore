@@ -1,5 +1,5 @@
 import { it, describe, expect } from "vitest";
-import getDriftAdjustedInterval from "./GameClockWebWorkerDriftHelper";
+import getDriftAdjustedInterval from "./DriftHelper";
 
 describe("GameClockWebWorkerDriftHelper", () => {
   const testCases = [
