@@ -9,7 +9,7 @@ export interface GameClock {
   reset: () => void;
 }
 
-const useGameClock = (gameTimeInMilliseconds: number, pollingIntervalInMilliseconds: number = 100, callback: () => void): GameClock => {
+const useGameClock = (gameTimeInMilliseconds: number, pollingIntervalInMilliseconds: number = 100): GameClock => {
   const [remainingTimeInMilliseconds, setRemainingTimeInMilliseconds] = useState<number>(gameTimeInMilliseconds); // timeLeft in milliseconds
   const remainingTimeInMillisecondsRef = useRef<number>(gameTimeInMilliseconds);
   const pollingIntervalInMillisecondsRef = useRef<number>(pollingIntervalInMilliseconds); // polling interval in milliseconds
@@ -50,9 +50,8 @@ const useGameClock = (gameTimeInMilliseconds: number, pollingIntervalInMilliseco
 
     if (remainingTimeInMillisecondsRef.current <= 0) {
       setIsStarted(false);
-      callback();
     }
-  }, [callback, pollingIntervalInMilliseconds, remainingTimeInMilliseconds]);
+  }, [pollingIntervalInMilliseconds, remainingTimeInMilliseconds]);
 
   const start = () => {
     setIsStarted(true);
